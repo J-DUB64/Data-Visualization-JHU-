@@ -1,0 +1,1259 @@
+---
+title: "Economic Inequality in the United States: A Data-Driven Exploration"
+author: "Joseph Wankelman"
+date: "`r Sys.Date()`"
+toc: true
+number-sections: true
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+bibliography: references.bib
+nocite: |
+  @*
+editor: visual
+---
+
+```{r setup, include=FALSE}
+# Load required Libraries
+library(flexdashboard)
+library(ggplot2)
+library(tidyverse)
+library(knitr)
+library(plotly)
+library(ggrepel)
+library(RColorBrewer)
+library(reshape2)
+library(scales)
+library(dplyr)
+library(hexbin)
+library(lubridate)
+library(geojsonio)
+library(sf)
+library(leaflet)
+library(shiny)
+library(d3Tree)
+library(treemap)
+library(tidycensus)
+library(maps)
+library(tigris)
+library(shinyWidgets)
+library(rlang)
+library(viridis)
+library(ggiraph)
+
+```
+
+```{r echo=FALSE, results='hide'}
+df <- read.csv("~/Desktop/JHU/Semester 1/Data Visualization/Class Project/Final Presentation/DHW_Monetary_Policy.csv")
+gini <- read.csv("~/Desktop/JHU/Semester 1/Data Visualization/Class Project/Final Presentation/Gini Ratio.csv")
+```
+
+```{r echo=FALSE, results='hide'}
+#Checking the Structure of the Dataset
+str(df)
+```
+
+```{r echo=FALSE, results='hide'}
+head(df)
+```
+
+```{r echo=FALSE, results='hide'}
+#Summary of the dataset
+summary(df)
+```
+
+```{r echo=FALSE, results='hide'}
+head(gini)
+```
+
+```{r echo=FALSE, results='hide'}
+#Checking the Structure of the Dataset
+str(gini)
+```
+
+```{r echo=FALSE, results='hide'}
+#Summary of the dataset
+summary(gini)
+```
+
+```{r echo=FALSE, results='hide'}
+#Checking dataset columns
+colnames(gini)
+
+```
+
+
+Gini Ratio Over Time  {data-orientation=rows}
+=======================================================================
+
+Description: Explore the historical trajectory of the Gini Ratio from 1980 to 2023, revealing trends in income inequality across the United States. This graph illustrates the shifts in wealth distribution and sets the stage for discussing the impacts of fiscal policy.
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Gini Ratio Over Time
+```{r, fig.width=10, fig.height=7}
+
+# Ensure 'observation_date' is in the Date format
+gini$observation_date <- as.Date(gini$observation_date)
+
+# Plotting the graph with specified y-axis limits and styles
+gini_plot <- ggplot(gini, aes(x = observation_date, y = Gini.Ratio, group = 1)) +
+  geom_line(color = viridis(1)) +
+  scale_y_continuous(limits = c(0.2, 0.6), labels = label_percent()) +  # Setting y-axis limits and labels
+  labs(title = "Gini Ratio Over Time",
+       subtitle = "An analysis of Gini Ratio trends",
+       x = "Year",
+       y = "Gini Ratio") +
+  theme_minimal() +
+  theme(legend.position = "right",
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 14))
+
+# Converting to an interactive plot with hover information
+ggplotly(gini_plot, tooltip = c("x", "y"))
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+income <- read.csv("~/Desktop/JHU/Semester 1/Data Visualization/Class Project/Final Presentation/Income Dispersion 1967 to 2022 cleaned.csv")
+```
+
+```{r echo=FALSE, results='hide'}
+#Familiarize myself with Data
+head(income)
+```
+
+```{r echo=FALSE, results='hide'}
+#remove 1st two rows in the header
+income1 <- income[-c(1, 2), ]
+```
+
+```{r echo=FALSE, results='hide'}
+head(income1)
+```
+
+```{r echo=FALSE, results='hide'}
+# Store the third row as the new header
+new_header <- as.character(income1[1,])
+
+# Remove the first row of the dataframe (which includes the incorrect headers and the row used for the new headers)
+income1 <- income1[-(1:1), ]
+
+# Set the new headers as column names
+colnames(income1) <- new_header
+
+# Reset the row names in case they are now out of sync
+rownames(income1) <- NULL
+
+# Check the first few rows to ensure changes have been applied
+head(income1)
+
+```
+
+```{r echo=FALSE, results='hide'}
+# Set the name of the columns"
+colnames(income1)[1] <- "Year"
+colnames(income1)[2] <- "Lowest quintile $"
+colnames(income1)[3] <- "Second quintile $"
+colnames(income1)[4] <- "Third quintile $"
+colnames(income1)[5] <- "Fourth quintile $"
+colnames(income1)[6] <- "Highest quintile $"
+colnames(income1)[7] <- "Top 5 percent $"
+colnames(income1)[8] <- "Lowest quintile %"
+colnames(income1)[9] <- "Second quintile %"
+colnames(income1)[10] <- "Third quintile %"
+colnames(income1)[11] <- "Fourth quintile %"
+colnames(income1)[12] <- "Highest quintile %"
+colnames(income1)[13] <- "Top 5 percent %"
+colnames(income1)[14] <- "Gini index of income inequality"
+colnames(income1)[15] <- "Mean logarithmic deviation of income"
+colnames(income1)[16] <- "Theil"
+head(income1)
+```
+
+
+### Gini Ratio Over Time Animated
+```{r animated-plot-html, eval = knitr::is_html_output(), fig.width=10, fig.height=7}
+
+### Gini Ratio Over Time Animated
+# Load required libraries
+library(gganimate)
+library(gifski)
+library(scales)
+
+# Ensure 'observation_date' is in Date format
+gini$observation_date <- as.Date(gini$observation_date)
+
+# Convert 'Gini.Ratio' to numeric if needed
+gini$Gini.Ratio <- as.numeric(as.character(gini$Gini.Ratio))
+
+# Create the animated plot
+p <- ggplot(gini, aes(x = observation_date, y = Gini.Ratio, group = 1)) +
+    geom_line(linewidth = 1.2, color = "#0073C2FF") +
+    geom_point(size = 2, color = "#0073C2FF") +
+    labs(title = 'Gini Index of Income Inequality by Year', 
+         y = 'Gini Index', 
+         x = 'Year') +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          plot.title = element_text(face = "bold", size = 16),
+          plot.subtitle = element_text(size = 14)) +
+    scale_y_continuous(labels = scales::label_number(suffix = "", scale = 1)) +
+    ylim(0.35, 0.5)
+
+# Add the animation effect
+animated_plot <- p + transition_reveal(observation_date) +
+    shadow_mark(past = TRUE, size = 1, color = 'blue') +
+    ease_aes('linear')
+
+# Animate and display the plot
+animate(animated_plot, fps = 10, end_pause = 50, width = 800, height = 600)
+
+# Save the animation
+anim_save("gini_ratio_animation.gif", animation = last_animation())
+
+
+
+
+```
+
+
+Income Trend Analysis  {data-orientation=rows}
+=======================================================================
+
+Description: These graphs depict the divergence in income and wealth growth over the past forty years, showing that the top quintiles, especially the top 5%, have experienced significantly larger increases than other segments. This disparity, evidenced by the stagnation of middle-class wealth and income, highlights the impact of fiscal and economic policies on wealth distribution, underscoring the urgent need to address the growing economic inequality and its effects on the middle class and overall economic stability.
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Wealth Distribution Percentage by Quantile {data-padding=10}
+```{r, fig.width=7, fig.height=7}
+# Create a wealth_percentage_columns as a vector containing the names of columns with percentages
+wealth_percentage_columns <- names(income1)[grepl("%", names(income1))]
+
+# Convert percentage columns to numeric
+income1_long <- income1 %>%
+  pivot_longer(cols = all_of(wealth_percentage_columns), names_to = "Quintile", values_to = "Wealth Distribution Percentage") %>%
+  mutate(`Wealth Distribution Percentage` = as.numeric(`Wealth Distribution Percentage`)) %>% 
+  mutate(`Wealth Distribution Percentage` = `Wealth Distribution Percentage` / 100) 
+
+# Calculate year-over-year change for each quintile
+income1_long <- income1_long %>%
+  arrange(Year, Quintile) %>%
+  group_by(Quintile) %>%  
+  mutate(Change = `Wealth Distribution Percentage` - lag(`Wealth Distribution Percentage`))
+
+# Create custom hover text including the year and the percentage change
+income1_long <- income1_long %>%
+  mutate(hover_text = paste0(
+    "Year: ", Year, "<br>",
+    "Quintile: ", Quintile, "<br>",
+    "Wealth Distribution Percentage: ", scales::percent(`Wealth Distribution Percentage`), "<br>",
+    "Change from previous year: ", 
+    ifelse(is.na(Change), "NA", paste0(sprintf("%.2f%%", Change * 100)))
+  ))
+
+# Plot the data with ggplot2
+p <- ggplot(income1_long, aes(x = Year, y = `Wealth Distribution Percentage`, text = hover_text, color = Quintile, group = Quintile)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 1.5) +
+  scale_color_viridis(discrete = TRUE, option = "D") +
+  labs(title = "Percentage of Wealth Distribution by Quantile",
+       subtitle = "Year-over-year change in wealth distribution percentages",
+       x = "Year",
+       y = "Wealth Distribution Percentage",
+       color = "Legend") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 14)) +
+  scale_y_continuous(labels = scales::label_percent(), limits = c(0, 0.55))
+
+# Convert to an interactive plotly object with custom hover text
+ggplotly(p, tooltip = "hover_text")
+
+```
+
+
+### Annual Income by Quantile {data-padding=10}
+```{r, fig.width=7, fig.height=7}
+# Create income column
+income_columns <- c("Lowest quintile $", "Second quintile $", "Third quintile $", "Fourth quintile $", "Highest quintile $", "Top 5 percent $")
+
+# Ensuring that the Year column is treated as a numerical value if it does not contain any non-numeric characters
+income1$Year <- as.numeric(gsub("[^0-9]", "", income1$Year))
+
+#Use the actual column names.
+income1[income_columns] <- lapply(income1[income_columns], function(x) as.numeric(gsub(",", "", as.character(x))))
+
+
+# Use tidyr::pivot_longer instead of gather
+income1_long <- income1 %>%
+  pivot_longer(cols = all_of(income_columns), names_to = "Quintile", values_to = "Income")
+
+# Plot the data with ggplot2 using the viridis color palette
+p <- ggplot(income1_long, aes(x = Year, y = Income, color = Quintile, group = Quintile)) +
+  geom_line(size = 1.2) + 
+  geom_point(size = 1.5) +  
+  scale_color_viridis(discrete = TRUE, option = "D") +
+  labs(title = "Annual Income by Quantile",
+       subtitle = "Trends in mean household income across different income quintiles",
+       x = "Year",
+       y = "Mean Household Income",
+       color = "Legend") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 14)) +
+  scale_y_continuous(labels = scales::dollar_format(prefix = "$", suffix = "K", scale = 1e-3))
+
+# Convert to an interactive plotly object
+ggplotly(p, tooltip = c("y", "x"))  
+
+```
+
+```{r echo=FALSE, results='hide'}
+#Checking dataset columns
+colnames(df)
+
+```
+
+### Total Distribution of Wealth by Quantile {data-padding=10}
+```{r, fig.width=20}
+# Convert Date_Observed to Date format
+df$Date_Observed <- as.Date(df$Date_Observed, format = "%b %d, %Y")
+
+# Select and pivot data
+wealth_distribution_columns <- c("Top_0.1", "X99_99.9", "X90_99", "X50_90", "Bottom_50")
+df_long <- df %>%
+  select(Date_Observed, all_of(wealth_distribution_columns)) %>%
+  pivot_longer(
+    cols = all_of(wealth_distribution_columns), 
+    names_to = "Quantile", 
+    values_to = "Wealth"
+  )
+
+#Percentile levels to desired labels
+df_long$Quantile <- recode(df_long$Quantile, 
+                           `Top_0.1` = "Top 0.1%", 
+                           `X99_99.9` = "99% to 99.9%", 
+                           `X90_99` = "90% to 99%", 
+                           `X50_90` = "51% to 90%", 
+                           `Bottom_50` = "Bottom 50%")
+
+# Create the plot
+wealth_plot <- ggplot(df_long, aes(x = Date_Observed, y = Wealth, color = Quantile, group = Quantile)) +
+  geom_line(size = 1.2) + 
+  geom_point(size = 1.5) +  
+  scale_color_manual(values = viridis_pal(option = "D")(5), 
+                     labels = c("Top 0.1%", "99% to 99.9%", "90% to 99%", "51% to 90%", "Bottom 50%")) +
+  labs(title = "Total Wealth Assets by Percentile",
+       subtitle = "An Analysis from 2007 to 2023",
+       x = "Date Observed", 
+       y = "Wealth (US $ Trillions)",
+       color = "Legend") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 14)) +
+  scale_y_continuous(labels = scales::dollar_format(prefix = "$", suffix = "T", scale = 1))
+
+# Convert to an interactive plotly object with customized tooltips
+interactive_plot <- ggplotly(wealth_plot, tooltip = c("y", "x", "color"))
+
+# Display the interactive plot
+interactive_plot
+
+```
+
+
+```{r}
+head(df_long)
+
+```
+
+### Income Trend Analysis: Wealth Distribution Total Assets Animated {data-padding=10}
+```{r animated-plot-html_wealth, eval = knitr::is_html_output(), fig.width=10, fig.height=7}
+
+# Create the plot
+p <- ggplot(df_long, aes(x = Date_Observed, y = Wealth, color = Quantile, group = Quantile)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 1.5) +
+  scale_color_viridis(discrete = TRUE, option = "D") +
+  labs(title = 'Wealth Distribution by Quantile',
+       subtitle = "Date-wise change in wealth distribution",
+       x = "Date Observed", y = "Wealth",
+       color = "Quantile") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 14)) +
+  scale_y_continuous(labels = scales::dollar_format(prefix = "$", suffix = "T", scale = 1))
+
+# Animate the plot with shadow lines that match the color of the lines
+animated_plot <- p + transition_time(Date_Observed) +
+  shadow_mark(past = TRUE, size = 0.8) +  # Maintain the color of the Quantile
+  ease_aes('linear')
+
+# Render the animation in R (this will show the animation in the Viewer pane in RStudio)
+animate(animated_plot, fps = 10, end_pause = 50, width = 800, height = 600)
+
+# Save the animation
+anim_save("wealth_distribution_animation.gif", animation = animated_plot, nframes = 200, duration = 20, end_pause = 50)
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+RMIUS <- read.csv("~/Desktop/JHU/Semester 1/Data Visualization/Class Project/Final Presentation/RMI United States.csv")
+```
+
+```{r echo=FALSE, results='hide'}
+# Make sure the column names are correct
+colnames(RMIUS)
+```
+
+RMI and CPI Over Time {data-orientation=rows}
+=======================================================================
+
+Description: These visualizations tracks the real median household income in the United States, adjusted for inflation from 1980 to 2023, alongside the Consumer Price Index (CPI) over the same period. It provides a dual perspective, showing both income growth and the inflation rate, to offer a comprehensive view of economic conditions and the changing purchasing power of American households over several decades.
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Real Median Household Income in the United States Over Time {data-padding=10}
+```{r}
+# Convert observation_date to Date format
+RMIUS$observation_date <- as.Date(RMIUS$observation_date, format = "%Y-%m-%d")
+
+# Add a formatted tooltip column to RMIUS
+RMIUS <- RMIUS %>% 
+  mutate(tooltip = paste("Year:", year(observation_date), 
+                         "<br>RMHI: $", formatC(Real.Median.Household.Income, format = "f", big.mark = ",", digits = 0)))
+
+# plot the graph with bars in one color
+RMIUS_plot <- ggplot(RMIUS, aes(x = observation_date, y = Real.Median.Household.Income, text = tooltip)) +
+  geom_bar(stat = "identity", fill = viridis(1, option = "D")) + 
+  labs(title = "Real Median Household Income in the United States Over Time",
+       x = "Year",
+       y = "Real Median Household Income (USD)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_y_continuous(labels = dollar_format(prefix = "$")) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+
+# Convert to an interactive plotly object with customized tooltips
+RMIUS_plotly <- ggplotly(RMIUS_plot, tooltip = "text") %>%
+  layout(hovermode = 'closest')
+
+# Display the interactive plot
+RMIUS_plotly
+
+```
+
+```{r echo=FALSE, results='hide'}
+#This is a redundant datset load but I finally got it to work and decided to not remove it 
+spdf <- st_read("~/Desktop/JHU/Semester 1/Data Visualization/Class Project/Final Presentation/us_states_hexgrid.geojson")
+```
+
+```{r echo=FALSE, results='hide'}
+Sys.setenv(GDAL_DATA = "/usr/local/Cellar/gdal/3.7.2_1/share/gdal")
+Sys.setenv(PROJ_LIB = "/usr/local/opt/proj")
+```
+
+```{r echo=FALSE, results='hide'}
+RMI <- read.csv("~/Desktop/JHU/Semester 1/Data Visualization/Class Project/Final Presentation/State Real Median Income.csv",header=TRUE, stringsAsFactors=FALSE)
+```
+
+
+```{r echo=FALSE, results='hide'}
+head(spdf) 
+```
+
+```{r echo=FALSE, results='hide'}
+head(RMI) 
+```
+
+```{r echo=FALSE, results='hide'}
+class(RMI$observation_date)
+```
+
+```{r echo=FALSE, results='hide'}
+table(nchar(as.character(RMI$observation_date)))
+```
+
+```{r echo=FALSE, results='hide'}
+#Due to a persistant error, reloading lubridate library here
+library(lubridate)
+library(magrittr)   
+
+# Convert the observation_Date column into a date format
+RMI$observation_date <- dmy(RMI$observation_date)
+
+# Organize data by State and Date
+organized_data <- RMI %>%
+  arrange(State, observation_date) %>%
+  head(n=50) #Select the first 50 rows rather (saves on pages in the PDF)
+
+# Print the organized data
+print(organized_data)
+```
+```{r echo=FALSE, results='hide'}
+# Check unique values of the merging columns
+unique(spdf$iso3166_2)
+unique(spdf$google_name)
+unique(RMI$State)
+```
+
+```{r echo=FALSE, results='hide'}
+# Complete mapping table that relates abbreviations to full names for all states
+state_map <- data.frame(
+  iso3166_2 = c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+                "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+                "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+                "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+                "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"),
+  State = c("Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", 
+            "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", 
+            "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", 
+            "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", 
+            "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", 
+            "New Hampshire", "New Jersey", "New Mexico", "New York", 
+            "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", 
+            "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", 
+            "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", 
+            "West Virginia", "Wisconsin", "Wyoming")
+)
+
+# Now, run existing code
+RMI %>%
+  filter(!(State %in% state_map$State)) %>%
+  select(State) %>%
+  unique()
+
+
+# Join df1 with state_map by state name, adding the iso3166_2 codes to df1
+RMI <- RMI %>%
+  left_join(state_map, by = "State")
+
+# Check if the join was successful and iso3166_2 column exists
+if("iso3166_2" %in% colnames(RMI)) {
+  # If the join was successful and the column exists, then convert it to uppercase
+  RMI <-RMI %>%
+    mutate(iso3166_2 = toupper(iso3166_2))
+} else {
+  warning("Column 'iso3166_2' does not exist in df1. Check if the join was successful.")
+}
+# Check the results
+head(RMI)
+
+```
+```{r echo=FALSE, results='hide'}
+# After joining, ensuring that the state codes are in uppercase to match spdf
+RMI <- RMI %>%
+  mutate(iso3166_2 = toupper(iso3166_2))
+
+# Check the results
+head(RMI, n=15)
+
+```
+
+```{r echo=FALSE, results='hide'}
+#Checking dataset columns
+colnames(RMI)
+colnames(spdf)
+```
+
+```{r echo=FALSE, results='hide'}
+cpi <- read.csv("~/Desktop/JHU/Semester 1/Data Visualization/Class Project/Final Presentation/CPIAUCSL.csv")
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+colnames(cpi)
+```
+
+
+### Consumer Price Index (CPI) Over Time
+```{r}
+# Convert observation_date to Date format
+cpi$observation_date <- as.Date(cpi$observation_date)
+
+# Filter out rows with missing CPIAUCSL values
+cpi <- cpi %>% filter(!is.na(CPIAUCSL))
+
+# Add a dummy variable for illustration purposes
+cpi$Dummy <- "CPI"
+
+# Create a CPI plot
+cpi_plot <- ggplot(cpi, aes(x = observation_date, y = CPIAUCSL, color = Dummy)) +
+  geom_line() +  # Use default color
+  scale_color_viridis_d() +  # Apply viridis color palette
+  labs(
+    title = "Consumer Price Index (CPI) Over Time",
+    subtitle = "United States (1947-2023)",
+    x = "Year",
+    y = "CPI",
+    caption = "Source: Bureau of Labor Statistics",
+    color = "Indicator"  # Label for the legend
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 20, face = "bold"),
+    plot.subtitle = element_text(size = 14),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.position = "right"  
+  )
+
+# Display the CPI plot
+print(cpi_plot)
+
+
+```
+
+Hexbin Map {data-orientation=rows}
+===================================== 
+
+Description: The Hexbin maps of the United States display real median household income for 2000, 2010, 2015, and 2022. Each map uses a color gradient to represent different income levels, highlighting shifts in median household income across various states over the two decades. These maps also reveal a trend in the movement of higher-paying positions, with specific areas becoming more affluent while others experience a decline in median income. This visual representation provides insight into economic changes and disparities within the United States over time.
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Hexbin Map: Real Median Household Income 2000 {data-width=500}
+```{r, fig.width=12, fig.height=8}
+# Merge the spatial data with RMI data
+hex_data <- merge(spdf, RMI, by.x = "iso3166_2", by.y = "iso3166_2")
+
+# Extract the year from observation_date
+hex_data$Year <- year(as.Date(hex_data$observation_date))
+
+# Filter the data for the year 2000
+hex_data_2000 <- hex_data[hex_data$Year == 2000, ]
+
+# Plot the hexbin map for 2000
+ggplot(hex_data_2000) +
+  geom_sf(aes(fill = Real_Median_Household_Income)) + 
+  geom_sf_text(aes(label = iso3166_2), size = 3, check_overlap = TRUE) +
+  scale_fill_viridis_c(labels = scales::comma) +
+  labs(title = "Hexbin Map of US States by Real Median Household Income in 2000") +
+  theme_minimal() +
+  theme(plot.margin = margin(1, 1, 1, 1, "mm"))
+```
+
+### Hexbin Map: Real Median Household Income 2010 {data-width=500}
+```{r, fig.width=12, fig.height=8}
+# Merge the spatial data with RMI data
+hex_data <- merge(spdf, RMI, by.x = "iso3166_2", by.y = "iso3166_2")
+
+# Extract the year from observation_date
+hex_data$Year <- year(as.Date(hex_data$observation_date))
+
+# Filter the data for the year 2010
+hex_data_2010 <- hex_data[hex_data$Year == 2010, ]
+
+# Plot the hexbin map for 2019
+ggplot(hex_data_2010) +
+  geom_sf(aes(fill = Real_Median_Household_Income)) + 
+  geom_sf_text(aes(label = iso3166_2), size = 3, check_overlap = TRUE) +
+  scale_fill_viridis_c(labels = scales::comma) +
+  labs(title = "Hexbin Map of US States by Real Median Household Income in 2010") +
+  theme_minimal() +
+  theme(plot.margin = margin(1, 1, 1, 1, "mm"))
+```
+
+
+### Hexbin Map: Real Median Household Income 2015 {data-width=500}
+```{r, fig.width=12, fig.height=8}
+# Merge the spatial data with RMI data
+hex_data <- merge(spdf, RMI, by.x = "iso3166_2", by.y = "iso3166_2")
+
+# Extract the year from observation_date
+hex_data$Year <- year(as.Date(hex_data$observation_date))
+
+# Filter the data for the year 2015
+hex_data_2015 <- hex_data[hex_data$Year == 2015, ]
+
+# Plot the hexbin map for 2015
+ggplot(hex_data_2015) +
+  geom_sf(aes(fill = Real_Median_Household_Income)) + 
+  geom_sf_text(aes(label = iso3166_2), size = 3, check_overlap = TRUE) +
+  scale_fill_viridis_c(labels = scales::comma) +
+  labs(title = "Hexbin Map of US States by Real Median Household Income in 2015") +
+  theme_minimal() +
+  theme(plot.margin = margin(1, 1, 1, 1, "mm"))
+```
+
+
+### Hexbin Map: Real Median Household Income 2022 {data-width=500}
+```{r, fig.width=12, fig.height=8}
+# Merge the spatial data with RMI data
+hex_data <- merge(spdf, RMI, by.x = "iso3166_2", by.y = "iso3166_2")
+
+# Extract the year from observation_date
+hex_data$Year <- year(as.Date(hex_data$observation_date))
+
+# Filter the data for the year 2020
+hex_data_2022 <- hex_data[hex_data$Year == 2022, ]
+
+# Plot the hexbin map for 2020
+ggplot(hex_data_2022) +
+  geom_sf(aes(fill = Real_Median_Household_Income)) + 
+  geom_sf_text(aes(label = iso3166_2), size = 3, check_overlap = TRUE) +
+  scale_fill_viridis_c(labels = scales::comma) +
+  labs(title = "Hexbin Map of US States by Real Median Household Income in 2022") +
+  theme_minimal() +
+  theme(plot.margin = margin(1, 1, 1, 1, "mm"))
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+#Load the Census API Key
+census_api_key("40281d2187403a277b174e30172129f2e2263059", install = TRUE, overwrite = TRUE)
+
+```
+
+```{r echo=FALSE, results='hide'}
+#Load readRenviron to access API key
+readRenviron("~/.Renviron")
+```
+
+```{r echo=FALSE, results='hide'}
+#Assign the value of the API key to the variable api_key
+api_key <- Sys.getenv("CENSUS_API_KEY")
+```
+
+```{r echo=FALSE, results='hide'}
+library(purrr)
+income_inequality <- get_acs(geography = "county", 
+                             variables = "B19083_001", 
+                             year = 2020, 
+                             survey = "acs5")
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+# Define a vector of years for which you want to pull data
+years <- 2015:2020
+
+# Modify income_inequality to include year
+income_inequality <- map_df(years, function(year) {
+  year_data <- get_acs(geography = "county", 
+                       variables = "B19083_001", 
+                       year = year, 
+                       survey = "acs5")
+  mutate(year_data, year = year)
+})
+
+# View the resulting data
+head(income_inequality)
+```
+
+```{r}
+median_income <- get_acs(geography = "county", 
+                         variables = "B19013_001", 
+                         year = 2020, 
+                         survey = "acs5")
+
+```
+
+```{r echo=FALSE, results='hide'}
+# Define a vector of years for which you want to pull data
+years <- 2015:2020
+
+# Modify median_income to include year
+median_income <- map_df(years, function(year) {
+  year_data <- get_acs(geography = "county", 
+                       variables = "B19013_001", 
+                       year = year, 
+                       survey = "acs5")
+  mutate(year_data, year = year)
+})
+
+# View the resulting data
+head(median_income)
+```
+
+```{r echo=FALSE, results='hide'}
+# Perform the join with corrected column names and including year
+combined_data <- income_inequality %>%
+  left_join(median_income, by = c("GEOID", "year"))
+```
+
+```{r echo=FALSE, results='hide'}
+head(combined_data)
+```
+
+```{r echo=FALSE, results='hide'}
+combined_data <- combined_data %>%
+  rename(
+    Gini_Index = estimate.x,
+    Median_Income = estimate.y
+  )
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+head(combined_data)
+```
+
+```{r echo=FALSE, results='hide'}
+# Load US map data
+us_counties <- sf::st_as_sf(maps::map("county", plot = FALSE, fill = TRUE))
+```
+
+```{r echo=FALSE, results='hide'}
+print(colnames(us_counties))
+```
+
+```{r echo=FALSE, results='hide'}
+head(us_counties)
+```
+
+```{r echo=FALSE, results='hide'}
+# Split the ID at the comma to separate the state and county
+us_counties_split <- strsplit(as.character(us_counties$ID), ",")
+
+```
+
+```{r echo=FALSE, results='hide'}
+# Create a new GEOID by pasting the county and state together in the format "County, State"
+us_counties$GEOID <- sapply(us_counties_split, function(x) paste(trimws(x[2]), trimws(x[1]), sep = ", "))
+
+```
+
+```{r echo=FALSE, results='hide'}
+head(us_counties)
+```
+
+```{r echo=FALSE, results='hide'}
+library(tools)
+
+# Assuming that 'ID' in us_counties is formatted as 'state,county' and we need it as 'County, State'
+us_counties$GEOID <- sapply(strsplit(as.character(us_counties$ID), ","), 
+                            function(x) {
+                              # Capitalize each part and paste them together
+                              paste(toTitleCase(trimws(x[2])), "County,", toTitleCase(trimws(x[1])))
+                            })
+
+
+```
+
+```{r echo=FALSE, results='hide'}
+head(us_counties)
+```
+
+```{r echo=FALSE, results='hide'}
+# Since combined_data already has a NAME column with "County, State" format, we can use that as the GEOID
+combined_data$GEOID <- combined_data$NAME.x
+
+```
+
+```{r echo=FALSE, results='hide'}
+head(combined_data)
+
+```
+
+```{r echo=FALSE, results='hide'}
+head(map_data)
+```
+
+```{r echo=FALSE, results='hide'}
+# Perform the merge using the new GEOID columns
+map_data <- left_join(us_counties, combined_data, by = "GEOID")
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+# Check column names
+print(colnames(combined_data))
+print(colnames(income_inequality))
+print(colnames(median_income))
+print(colnames(us_counties))
+print(colnames(map_data))
+```
+
+
+```{r echo=FALSE, results='hide'}
+# Since combined_data has a NAME column with "County, State" format, we will use that for merging
+combined_data$GEOID <- combined_data$NAME.x
+
+# check if combined_data has a column that matches GEOID in us_counties
+if("NAME.x" %in% names(combined_data)) {
+  # If yes, use that for GEOID
+  combined_data$GEOID <- combined_data$NAME.x
+} else {
+}
+
+# Now perform the join using the GEOID columns
+map_data <- left_join(us_counties, combined_data, by = "GEOID")
+
+
+```
+
+```{r echo=FALSE, results='hide'}
+# Filter for Louisiana entries in combined_data
+louisiana_combined <- combined_data[grep(", Louisiana", combined_data$NAME.x), ]
+# Check the first few entries to see the naming convention
+head(louisiana_combined)
+
+
+```
+
+```{r echo=FALSE, results='hide'}
+# Filter for Louisiana entries in us_counties
+louisiana_counties <- us_counties[grep("louisiana", us_counties$ID, ignore.case = TRUE), ]
+# Check the first few entries to see the naming convention
+head(louisiana_counties)
+
+
+```
+
+```{r echo=FALSE, results='hide'}
+# Create a new column GEOID with updated names
+us_counties$GEOID <- ifelse(grepl("louisiana", us_counties$ID, ignore.case = TRUE),
+                            gsub("County", "Parish", us_counties$GEOID),
+                            us_counties$GEOID)
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+# Filter for Louisiana entries in us_counties
+louisiana_counties <- us_counties[grep("louisiana", us_counties$ID, ignore.case = TRUE), ]
+# Check the first few entries to see the naming convention
+head(louisiana_counties)
+
+
+```
+
+```{r echo=FALSE, results='hide'}
+# Since combined_data has a NAME column with "County, State" format, we will use that for merging
+combined_data$GEOID <- combined_data$NAME.x
+
+# Perform the merge using the new GEOID columns
+map_data <- left_join(us_counties, combined_data, by = "GEOID")
+
+
+```
+
+
+
+Gini Index Per County {data-orientation=rows}
+=======================================================================
+Description: The map of the United States depicting income inequality (Gini Ratio) by county in 2020, as indicated by the Gini Index values. The map uses a color gradient to represent the Gini Index range from 0.3 to 0.7, with varying shades of green to blue, showing the degree of income inequality within each county.
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Gini Index Per County, United States
+```{r}
+ggplot(map_data) +
+  geom_sf(aes(fill = Gini_Index), color = "white", size = 0.1) + # Use 'estimate' for fill
+  scale_fill_viridis_c(
+    name = "Gini Index",
+    labels = scales::label_number(suffix = ""),
+    option = "D"
+  ) +
+  labs(
+    title = "Income Inequality by County in 2020",
+    subtitle = "Visualized using Gini Index values",
+    caption = "Source: American Community Survey 2016-2020"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    plot.caption = element_text(size = 8)
+  )
+```
+
+
+
+Median Income Per County {data-orientation=rows}
+=======================================================================
+
+Description: The map of the United States, illustrates the median household income by county in 2020, with a color scale that seems to reflect income levels from $50,000 to $100,000. The use of varying shades of blue to green across the counties serves to highlight the differences in median income, providing a visual representation of economic disparities across the country
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Median Income Per County, United States
+```{r}
+ggplot(map_data) +
+  geom_sf(aes(fill = Median_Income), color = "white", size = 0.1) + # Use 'estimate' for fill
+  scale_fill_viridis_c(
+    name = "Median Income",
+    labels = scales::label_number(suffix = ""),
+    option = "D"
+  ) +
+  labs(
+    title = "Median Household Income by County in 2020",
+    subtitle = "Visualized using Gini Index values",
+    caption = "Source: American Community Survey 2016-2020"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    plot.caption = element_text(size = 8)
+  )
+```
+
+
+Wealth Asset Distribution
+===================================== 
+
+Description: The histogram charts related to the Federal Reserve Balance Sheet Assets and the wealth assets of each quantile. The first histogram shows a distribution of values, with a higher frequency in the mid-range of the assets scale, indicating a concentration of balance sheet values within a specific range. This chart is important as it offers insight into the distribution and concentration of Federal Reserve and quantile wealth assets, which can indicate implications for monetary policy and economic analysis.
+
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Distribution of Federal Reserve Balance Sheet Assets
+```{r}
+#Basic histogram
+hist(df$`Federal_Reserve_Balance_Sheet_Asset`)
+
+# Histogram using ggplot with flipped axes
+plot <- ggplot(df, aes(x = Federal_Reserve_Balance_Sheet_Assets)) + 
+  geom_histogram(aes(fill = ..count..), bins = 30, alpha = 0.7) +
+  scale_fill_viridis_c() + # using viridis color scale
+  labs(title = "Distribution of Federal Reserve Balance Sheet Assets",
+       subtitle = "An Analysis of Asset Values",
+       y = "Number of Observations",
+       x = "Federal Reserve Balance Sheet Assets in $ Trillions",
+       fill = "Quarterly Interval Count") +
+  theme_minimal() +
+  coord_flip() # Flip the coordinates
+
+# Display the plot
+print(plot)
+```
+
+### Distribution Wealth Assets Over Time per Quantile
+```{r}
+#Basic histogram
+hist(df$`Top_0.1`)
+
+
+# Histogram using ggplot with flipped axes
+plot <- ggplot(df, aes(x = Top_0.1)) + 
+  geom_histogram(aes(fill = ..count..), bins = 30, alpha = 0.7) +
+  scale_fill_viridis_c() + 
+  labs(
+    title = "Distribution of 0.1% Balance Sheet Assets",
+       subtitle = "An Analysis of Asset Values",
+       y = "Number of Observations",
+       x = "Top 0.1% Balance Sheet Assets in $ Trillions",
+       fill = "Quarterly Interval Count") +
+  theme_minimal() +
+  coord_flip() 
+
+# Display the plot
+print(plot)
+
+```
+
+
+```{r echo=FALSE, results='hide'}
+#Basic histogram
+hist(df$`X99_99.9`)
+
+# Histogram using ggplot with flipped axes
+plot <- ggplot(df, aes(x = X99_99.9)) + 
+  geom_histogram(aes(fill = ..count..), bins = 30, alpha = 0.7) +
+  scale_fill_viridis_c() + 
+  labs(
+    title = "Distribution of 99% to 99.9% Balance Sheet Assets",
+       subtitle = "An Analysis of Asset Values",
+       y = "Number of Observations",
+       x = "99% to 99.9% Balance Sheet Assets in $ Trillions",
+       fill = "Quarterly Interval Count") +
+  theme_minimal() +
+  coord_flip() 
+
+# Display the plot
+print(plot)
+
+```
+
+```{r echo=FALSE, results='hide'}
+#Basic histogram
+hist(df$`X90_99`)
+
+# Histogram using ggplot with flipped axes
+plot <- ggplot(df, aes(x = X90_99)) + 
+  geom_histogram(aes(fill = ..count..), bins = 30, alpha = 0.7) +
+  scale_fill_viridis_c() + 
+  labs(
+    title = "Distribution of 90% to 99% Balance Sheet Assets",
+       subtitle = "An Analysis of Asset Values",
+       y = "Number of Observations",
+       x = "90% to 99% Balance Sheet Assets in $ Trillions",
+       fill = "Quarterly Interval Count") +
+  theme_minimal() +
+  coord_flip() 
+
+# Display the plot
+print(plot)
+
+```
+
+```{r echo=FALSE, results='hide'}
+#histogram
+hist(df$`X50_90`)
+
+# Histogram using ggplot with flipped axes
+plot <- ggplot(df, aes(x = X50_90)) + 
+  geom_histogram(aes(fill = ..count..), bins = 30, alpha = 0.7) +
+  scale_fill_viridis_c() + 
+  labs(
+    title = "Distribution of 50-99% Balance Sheet Assets",
+       subtitle = "An Analysis of Asset Values",
+       y = "Number of Observations",
+       x = "50-99% Balance Sheet Assets in $ Trillions",
+       fill = "Quarterly Interval Count") +
+  theme_minimal() +
+  coord_flip() 
+
+# Display the plot
+print(plot)
+
+```
+
+```{r}
+#histogram
+hist(df$`Bottom_50`)
+
+# Histogram using ggplot with flipped axes
+plot <- ggplot(df, aes(x = Bottom_50)) + 
+  geom_histogram(aes(fill = ..count..), bins = 30, alpha = 0.7) +
+  scale_fill_viridis_c() + 
+  labs(
+    title = "Distribution of Bottom 50% Balance Sheet Assets",
+       subtitle = "An Analysis of Asset Values",
+       y = "Number of Observations",
+       x = "Bottom 50% Balance Sheet Assets in $ Trillions",
+       fill = "Quarterly Interval Count") +
+  theme_minimal() +
+  coord_flip() 
+
+# Display the plot
+print(plot)
+
+```
+
+
+
+
+```{r}
+# Wealth Distribution Over Time
+wealth_df <- df %>% 
+  select(Date_Observed, starts_with("Top"), starts_with("99-99.9"), starts_with("90-99"), starts_with("50-90"), starts_with("Bottom"))
+
+wealth_df_long <- gather(wealth_df, "Wealth_Percentile", "Wealth", -Date_Observed)
+
+```
+
+Federal Balance Sheet Compared to Wealth Distribution {data-orientation=rows}
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Distribution of wealth Compared to Federal Balance Sheet Chart
+```{r, fig.width=12, fig.height=8}
+# Filter the data to only include rows with QE events
+qe_data <- df %>% filter(!is.na(Quantitative_Easing) & Quantitative_Easing != "")
+
+# Calculate growth percentage
+df <- df %>%
+  mutate(Start_Value = first(Federal_Reserve_Balance_Sheet_Assets),
+         End_Value = last(Federal_Reserve_Balance_Sheet_Assets),
+         Growth_Percentage = ((End_Value - Start_Value) / Start_Value) * 100)
+
+# Combine both charts into one
+combined_plot <- ggplot() + 
+  # Line chart for Federal Reserve Balance Sheet Assets
+  geom_line(data = df, aes(x = Date_Observed, y = Federal_Reserve_Balance_Sheet_Assets, color = "Balance Sheet Assets"), size = 1) + 
+  
+  # Points for QE events using the filtered qe_data
+  geom_point(data = qe_data, aes(x = Date_Observed, y = Federal_Reserve_Balance_Sheet_Assets, color = "Quantitative Easing"), size = 2) +
+  
+  # Labels for QE events
+  geom_text_repel(data = qe_data, 
+                  aes(x = Date_Observed, y = Federal_Reserve_Balance_Sheet_Assets, label = Quantitative_Easing), 
+                  nudge_y = 0.3, box.padding = unit(0.35, "lines"),
+                  max.overlaps = 100, size = 3) +
+
+  # Line chart for Wealth Distribution
+  geom_line(data = wealth_df_long, aes(x = Date_Observed, y = Wealth, group = Wealth_Percentile, color = Wealth_Percentile)) +
+  
+
+    # Change line colors for .1%, Balance Sheet Assets, Quantitative Easing, and Bottom 50% percentiles
+    scale_color_manual(
+      name = "Legend",
+      values = c("Top_0.1" = "red", 
+                 "Balance Sheet Assets" = "purple", 
+                 "Quantitative Easing" = "darkcyan",  
+                 "Bottom_50" = "darkblue"),
+      breaks = c("Top_0.1", "Balance Sheet Assets", "Quantitative Easing", "Bottom_50")
+    ) +
+
+   # Aesthetics and Labels
+  labs(title = "Federal Reserve Balance Sheet Assets and Wealth Distribution Over Time",
+       x = "Date", 
+       y = "Value (in trillions)", 
+       subtitle = "Correlation between QE events, changes in the Fed's assets, and Wealth Distribution") +
+  theme_minimal() + 
+  theme(
+    legend.position = "right",  
+    plot.title = element_text(size = 14, face = "bold"),  
+    plot.subtitle = element_text(size = 12), 
+    plot.caption = element_text(size = 8)  
+  ) +
+  
+  # Modify text size (if needed for other text elements)
+  theme(text = element_text(size = 10)) + 
+  
+  # Adjust the legend to show a line for 'Balance Sheet Assets' and a dot and line for 'Quantitative Easing'
+  guides(color = guide_legend(
+    override.aes = list(
+      shape = c(NA, NA, 16, NA),     # Add NA for 'Balance Sheet Assets' to remove the dot, and 16 for 'Quantitative Easing'
+      linetype = c("solid", "solid", "solid", "solid"), # Add solid lines for all
+      size = c(1, 1, 3, 1)           # Adjust the size for 'Quantitative Easing' dot
+    )
+  ))
+
+# Display the combined plot
+print(combined_plot)
+```
+
+
+### Chart Analysis
+The Federal Reserve Balance Sheet Assets and Wealth Distribution Over Time chart presents a time series analysis of the Federal Reserve's balance sheet assets alongside the wealth distribution among .1% and bottom 50% quantile segments from 2008 to 2022. The .1% quantile segement balance sheet assets line, denoted in red, shows a marked increase over time, particularly during periods labeled as Quantitative Easing (QE) and the COVID-19 Pandemic Response. These increases correspond to the Federal Reserve's monetary policy actions, which is reflected by the purple line with dark blue dots indicating each year. The QE actions often aim to lower interest rates and stimulate economic activity, especially during economic downturns or crises.
+
+The blue line represents the wealth of the bottom 50% of the population, and it appears relatively flat, with a slight uptick in later years, suggesting that the wealth of this group has relatively stagnant growth over a 14 year period. In contrast, the wealth of the top 0.1%, shown by the red line, has seen a much more significant increase, particularly aligning with the Federal Reserve's balance sheet expansion.
+
+This divergence could indicate that while stabilizing financial markets and promoting investment, monetary policy may also inadvertently contribute to wealth inequality. The wealth of the top 0.1% could be more closely tied to asset markets, which have benefited from low interest rates and increased liquidity. Meanwhile, the bottom 50%, which may have less exposure to these markets, experience a different level of wealth growth.
+
+The importance of this chart lies in its potential to inform discussions on economic policy, particularly regarding the effectiveness and consequences of monetary interventions. It visually argues that while such policies may be necessary for economic recovery and stabilization, they may also exacerbate wealth inequality. This underscores the need for a holistic approach to policy-making, which considers the distributional effects of monetary policy and the potential need for complementary fiscal measures to promote wealth equality.
+
+
+
+
+
+
